@@ -1,0 +1,154 @@
+
+
+//owner/address[country='Česká republika']/postalCode
+
+//flat[xs:decimal(rate) < avg(//flat/xs:decimal(rate))]
+
+
+Owner bez nemovitosti:
+
+//owner[not(@idOwner = //property/@owner)]
+
+
+
+
+
+
+
+xPath:
+kategorie 1:
+- vyberte PSČ ("postal codes") všech vlastníků z České Republiky
+- //owner[contains(address/country, 'Česk')]/address/postalCode OR
+//owner[address/country = 'Česká republika']/address/postalCode
+
+
+
+
+
+- vyberte hodnoty "rate" všech bytů s úrovní "comfort level" C, ze všech
+elementů "property" kromě p2.
+-//flat[@comfort = 'C' and @property != 'p2']/rate
+
+
+kategorie 2:
+-vyberte byty, jejichž hodnocení "rate" je nižší než průměr.
+-//flat[number(rate) < avg(//flat/rate/xs:double(.))]
+
+
+- vyberte vlastníky, kteří nemají přiřazen žádný element "property" (tj. ty
+vlastníky, jejichž id není uvedeno jako atribut u žádného elementu "property")
+-//owner[not(@idOwner = //property/@owner)]
+
+xQuery pro builder verzi Saxon-HE XQuery 12.5 (XQuery 3.1).:
+- vypište názvy všech bytů s úrovní "comfort level" B nebo C, u nichž je "rate
+value" pod průměrem
+let $avgRate := avg(for $r in //flat/rate return xs:double($r))
+for $f in //flat[@comfort = 'B' or @comfort = 'C']
+where xs:double($f/rate) < $avgRate
+return $f/name
+
+
+- vypište názvy všech bytů, které patří k nemovitosti "property" p1 a které
+mají počet "features" větší než 3
+for $f in //flat[@property = 'p1']
+where count($f/features/feature) > 3
+return
+    element flat {
+        attribute features { count($f/features/feature) },
+        element name { string($f/name) }
+       }
+
+
+
+
+SELECT zak.jmen + ' ' + zak.prijm as Zákazník
+from ZAK
+WHERE NOT EXISTs (
+select 1
+from obj
+join poloz on obj.ciso = poloz.ciso
+join zboz on poloz.kod = zboz.kod
+join kat on zboz.kat = kat.kat
+where obj.zak = zak.log and kat.nazk = 'ovoce, zelenina')
+and EXISTS (
+select 1
+from obj 
+join poloz on obj.ciso = poloz.ciso
+where obj.zak = zak.log);
+
+
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+task 2:
+
+SELECT dbo.ZBOZ.NAZ AS Zboží, SUM(dbo.POLOZ.VCEN) AS [Celková cena]
+FROM dbo.OBJ INNER JOIN
+	dbo.POLOZ ON dbo.OBJ.CISO = dbo.POLOZ.CISO INNER JOIN
+	dbo.ZBOZ ON dbo.POLOZ.KOD = dbo.ZBOZ.KOD
+WHERE (dbo.OBJ.MEST LIKE 'Praha%')
+GROUP BY dbo.ZBOZ.NAZ
+ORDER BY Zboží
+
+-----
+
+task 3:
+
+SELECT ZAK.PRIJM + ' ' + ZAK.JMEN AS [Jména zákazníka]
+FROM ZAK
+
+EXCEPT
+
+SELECT OBJ.PRIJM + ' ' + OBJ.JMEN
+FROM OBJ
+INNER JOIN POLOZ ON OBJ.CISO = POLOZ.CISO
+INNER JOIN ZBOZ ON POLOZ.KOD = ZBOZ.KOD
+WHERE ZBOZ.KAT = 'ovze'
+
+ORDER BY [Jména zákazníka];
+
+-----
+
+task 4:
+
+SELECT CISO AS [Číslo obj.], JMEN + ' ' + PRIJM AS Zákazník
+FROM OBJ
+WHERE DATEDIFF(MONTH, DAT, DATOD) > 1
+ORDER BY CISO;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Takto zpracujeme task number one? no? 
+
+SELECT dbo.OBJ.CISO AS [Číslo objednávky], dbo.OBJ.DAT AS [Datum přijetí], COUNT(dbo.POLOZ.CISO) AS [Počet položek]
+FROM dbo.OBJ INNER JOIN
+	dbo.POLOZ ON dbo.OBJ.CISO = dbo.POLOZ.CISO
+GROUP BY dbo.OBJ.CISO, dbo.OBJ.DAT
+HAVING (COUNT(dbo.POLOZ.CISO) > 3)
